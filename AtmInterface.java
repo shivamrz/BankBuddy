@@ -1,4 +1,6 @@
 import java.io.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 class BankAccount {
@@ -55,30 +57,11 @@ class BankAccount {
         return accountNo;
     }
 
-    // Method to check if a password meets the specified conditions
+    // Utility method to validate password with the required conditions
     public boolean isValidPassword(String password) {
-        if (password.length() < 8) {
-            return false;
-        }
-
-        boolean hasNumber = false;
-        boolean hasUpperCase = false;
-        boolean hasLowerCase = false;
-        boolean hasSpecialChar = false;
-
-        for (char ch : password.toCharArray()) {
-            if (Character.isDigit(ch)) {
-                hasNumber = true;
-            } else if (Character.isUpperCase(ch)) {
-                hasUpperCase = true;
-            } else if (Character.isLowerCase(ch)) {
-                hasLowerCase = true;
-            } else if (!Character.isLetterOrDigit(ch)) {
-                hasSpecialChar = true;
-            }
-        }
-
-        return hasNumber && hasUpperCase && hasLowerCase && hasSpecialChar;
+        // At least 8 characters, at least one digit, one special character, one uppercase, and one lowercase character
+        String regex = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,}$";
+        return password.matches(regex);
     }
 
     // Method to register a user and save their details to a file
@@ -86,12 +69,12 @@ class BankAccount {
         Scanner sc = new Scanner(System.in);
         System.out.print("\nEnter Your Name: ");
         this.name = sc.nextLine();
-
+    
         // Check if the username already exists, if so, prompt the user to enter a new one
         while (true) {
             System.out.print("\nEnter Your Username: ");
             this.userName = sc.nextLine();
-
+    
             if (isUsernameExists(this.userName)) {
                 System.out.println("\nUsername already exists. Please choose a different username.");
             } else {
@@ -99,27 +82,29 @@ class BankAccount {
             }
         }
 
-        // Validate password with conditions
+        
+    
+        // Loop to ensure valid password
         while (true) {
             System.out.print("\nEnter Your Password: ");
             this.password = sc.nextLine();
-
+    
             if (isValidPassword(this.password)) {
                 break;
             } else {
-                System.out.println("\nPassword must meet the following criteria:");
-                System.out.println("- At least 8 characters");
-                System.out.println("- At least 1 number");
-                System.out.println("- At least 1 special character");
-                System.out.println("- At least 1 uppercase and 1 lowercase character");
+                System.out.println("\nPassword must meet the criteria:\n" +
+                        "- At least 8 characters\n" +
+                        "- At least 1 number\n" +
+                        "- At least 1 special character\n" +
+                        "- At least 1 uppercase and 1 lowercase character");
             }
         }
-
+    
         // Generate a unique account number
         this.accountNo = generateAccountNo();
         System.out.println("\nYour account number is: " + this.accountNo);
         System.out.println("Registration completed! Kindly login now.");
-
+    
         // Save the user details to a file
         try (FileWriter fw = new FileWriter("users.txt", true)) {
             fw.write(userName + "," + password + "," + name + "," + accountNo + "," + balance + "\n");
@@ -192,129 +177,149 @@ class BankAccount {
         }
     }
 
+    // Utility method to get current date and time as a string
+    private String getCurrentDateTime() {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now();
+        return dtf.format(now);
+    }
+
+    // Method to append transaction history to the user's individual file
+    private void appendTransactionToFile(String transaction) {
+        String filename = userName + "_transactions.txt";  // Create a unique filename for each user
+        try (FileWriter fw = new FileWriter(filename, true)) {
+            fw.write(transaction + "\n");
+        } catch (IOException e) {
+            System.out.println("Error saving transaction history.");
+        }
+    }
+
     // Method to change password
     public void changePassword() {
-        Scanner sc = new Scanner(System.in);
-        System.out.print("\nEnter your current password: ");
-        String currentPassword = sc.nextLine();
+    Scanner sc = new Scanner(System.in);
+    System.out.print("\nEnter your current password: ");
+    String currentPassword = sc.nextLine();
 
-        if (this.password.equals(currentPassword)) {
-            while (true) {
-                System.out.print("\nEnter your new password: ");
-                String newPassword = sc.nextLine();
+    if (this.password.equals(currentPassword)) {
+        while (true) {
+            System.out.print("\nEnter your new password: ");
+            String newPassword = sc.nextLine();
 
-                if (!newPassword.equals(this.password) && isValidPassword(newPassword)) {
+            if (!newPassword.equals(this.password)) {
+                if (isValidPassword(newPassword)) {
                     this.password = newPassword;
                     updateFile();  // Save updated password to file
                     System.out.println("\nPassword changed successfully.");
                     break;
-                } else if (newPassword.equals(this.password)) {
-                    System.out.println("\nNew password cannot be the same as the current password.");
                 } else {
-                    System.out.println("\nPassword must meet the following criteria:");
-                    System.out.println("- At least 8 characters");
-                    System.out.println("- At least 1 number");
-                    System.out.println("- At least 1 special character");
-                    System.out.println("- At least 1 uppercase and 1 lowercase character");
-                }
-            }
-        } else {
-            System.out.println("\nCurrent password is incorrect.");
-        }
-    }
-
-    // Method to withdraw money
-    public void withdraw() {
-        Scanner sc = new Scanner(System.in);
-        System.out.print("\nEnter amount to withdraw: ");
-        float amount = sc.nextFloat();
-
-        if (balance >= amount) {
-            balance -= amount;
-            transactions++;
-            System.out.println("\nWithdrawal of Rs." + amount + " successful.");
-            updateFile(); // Update balance in the file
-        } else {
-            System.out.println("\nInsufficient balance.");
-        }
-    }
-
-    // Method to deposit money
-    public void deposit() {
-        Scanner sc = new Scanner(System.in);
-        System.out.print("\nEnter amount to deposit: ");
-        float amount = sc.nextFloat();
-
-        balance += amount;
-        transactions++;
-        System.out.println("\nDeposit of Rs." + amount + " successful.");
-        updateFile(); // Update balance in the file
-    }
-
-    // Method to transfer money
-    public void transfer() {
-        Scanner sc = new Scanner(System.in);
-        System.out.print("\nEnter account number to transfer: ");
-        String recipientAccount = sc.nextLine();
-
-        System.out.print("\nEnter amount to transfer: ");
-        float amount = sc.nextFloat();
-
-        if (balance >= amount) {
-            // Check if recipient account exists
-            boolean recipientFound = false;
-            List<String> userData = new ArrayList<>();
-            try (BufferedReader br = new BufferedReader(new FileReader("users.txt"))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    String[] details = line.split(",");
-                    if (details[3].equals(recipientAccount)) {
-                        float recipientBalance = Float.parseFloat(details[4]);
-                        recipientBalance += amount;
-                        details[4] = String.valueOf(recipientBalance);
-                        line = String.join(",", details);
-                        recipientFound = true;
-                    }
-                    userData.add(line);
-                }
-            } catch (IOException e) {
-                System.out.println("Error reading file.");
-            }
-
-            if (recipientFound) {
-                balance -= amount;
-                transactions++;
-                System.out.println("\nSuccessfully transferred Rs." + amount + " to Account No. " + recipientAccount);
-                updateFile();  // Update the sender's balance
-                // Write the updated content back to the file for the recipient
-                try (FileWriter fw = new FileWriter("users.txt", false)) {
-                    for (String data : userData) {
-                        fw.write(data + "\n");
-                    }
-                } catch (IOException e) {
-                    System.out.println("Error updating recipient data.");
+                    System.out.println("\nPassword must meet the criteria:\n" +
+                            "- At least 8 characters\n" +
+                            "- At least 1 number\n" +
+                            "- At least 1 special character\n" +
+                            "- At least 1 uppercase and 1 lowercase character");
                 }
             } else {
-                System.out.println("\nRecipient account not found.");
+                System.out.println("\nNew password cannot be the same as the current password.");
             }
-        } else {
-            System.out.println("\nInsufficient balance.");
         }
-    }
-
-    // Method to check balance
-    public void checkBalance() {
-        System.out.println("\nYour current balance is: Rs." + balance);
-    }
-
-    // Method to display transaction history
-    public void transHistory() {
-        System.out.println("\nNumber of transactions: " + transactions);
+    } else {
+        System.out.println("\nCurrent password is incorrect.");
     }
 }
 
-public class AtmInterface {
-    // Method to take integer input within a range
+    // Updated Withdraw Method with Amount Validation and Date/Time
+    public void withdraw() {
+        System.out.print("\nEnter amount to withdraw: ");
+        Scanner sc = new Scanner(System.in);
+        float amount = sc.nextFloat();
+        if (amount <= 0) {
+            System.out.println("\nInvalid amount. Please enter a positive amount.");
+            return;
+        }
+        if (balance >= amount) {
+            transactions++;
+            balance -= amount;
+            System.out.println("\nWithdraw Successful");
+
+            // Prepare transaction details with date and time
+            String transaction = getCurrentDateTime() + ": " + amount + " Rs Withdrawn";
+            appendTransactionToFile(transaction);  // Save transaction to file
+            updateFile();  // Save updated balance to file
+        } else {
+            System.out.println("\nInsufficient Balance");
+        }
+    }
+
+    // Updated Deposit Method with Amount Validation and Date/Time
+    public void deposit() {
+        System.out.print("\nEnter amount to deposit: ");
+        Scanner sc = new Scanner(System.in);
+        float amount = sc.nextFloat();
+        if (amount <= 0) {
+            System.out.println("\nInvalid amount. Please enter a positive amount.");
+            return;
+        }
+        if (amount <= 100000f) {
+            transactions++;
+            balance += amount;
+            System.out.println("\nSuccessfully Deposited");
+
+            // Prepare transaction details with date and time
+            String transaction = getCurrentDateTime() + ": " + amount + " Rs Deposited";
+            appendTransactionToFile(transaction);  // Save transaction to file
+            updateFile();  // Save updated balance to file
+        } else {
+            System.out.println("\nSorry...Limit is 100000.00");
+        }
+    }
+
+    // Updated Transfer Method with Amount Validation and Date/Time
+    public void transfer() {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("\nEnter Recipient's Name: ");
+        String recipient = sc.nextLine();
+        System.out.print("\nEnter amount to transfer: ");
+        float amount = sc.nextFloat();
+        if (amount <= 0) {
+            System.out.println("\nInvalid amount. Please enter a positive amount.");
+            return;
+        }
+        if (balance >= amount && amount <= 50000f) {
+            transactions++;
+            balance -= amount;
+            System.out.println("\nSuccessfully Transferred to " + recipient);
+
+            // Prepare transaction details with date and time
+            String transaction = getCurrentDateTime() + ": " + amount + " Rs Transferred to " + recipient;
+            appendTransactionToFile(transaction);  // Save transaction to file
+            updateFile();  // Save updated balance to file
+        } else if (amount > 50000f) {
+            System.out.println("\nSorry...Limit is 50000.00");
+        } else {
+            System.out.println("\nInsufficient Balance");
+        }
+    }
+
+    // Method to display transaction history from the user's individual file
+    public void transHistory() {
+        String filename = userName + "_transactions.txt";  // Use the unique filename for each user
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.out.println("\nNo transactions recorded yet.");
+        }
+    }
+
+    public void checkBalance() {
+        System.out.println("\n" + "Available Balance: Rs " + balance);
+    }
+}
+
+public class newF {
+
     public static int takeIntegerInput(int limit) {
         int input = 0;
         boolean flag = false;
@@ -326,11 +331,11 @@ public class AtmInterface {
                 flag = true;
 
                 if (flag && (input > limit || input < 1)) {
-                    System.out.println("Choose the number between 1 to " + limit);
+                    System.out.println("Choose a number between 1 and " + limit);
                     flag = false;
                 }
             } catch (Exception e) {
-                System.out.println("Enter only integer value");
+                System.out.println("Enter only integer values.");
                 flag = false;
             }
         }
@@ -338,10 +343,8 @@ public class AtmInterface {
     }
 
     public static void main(String[] args) {
-        System.out.println("\n**********WELCOME TO ATM SYSTEM**********\n");
-        Scanner sc = new Scanner(System.in);
-
         BankAccount b = null;
+        System.out.println("\n**********WELCOME TO PNB ATM SYSTEM**********\n");
 
         while (true) {
             System.out.println("\n1. Register \n2. Login \n3. Exit");
