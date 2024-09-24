@@ -1,4 +1,4 @@
-#  **Overview**
+#  **Bank Buddy**
 
 BankBuddy is a Java-based ATM Interface that simulates basic banking functionalities such as account balance checking, cash withdrawal, deposit, and transaction history. Designed to provide a user-friendly experience, BankBuddy allows users to manage their accounts securely and efficiently through a simple command-line interface.
 
